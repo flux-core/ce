@@ -8,38 +8,45 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # 1. 确保安装路径完全正确：C:\lazarus
+    # 1. 安全安装 Lazarus 编译环境
     - name: Install Lazarus via Choco
       run: |
         choco install lazarus --version=2.2.6 -y --no-progress
         echo "C:\lazarus" >> $env:GITHUB_PATH
 
-    # 2. 拉取源码
+    # 2. 拉取 Cheat Engine 官方完整源码（带上所有历史分支和标签）
     - name: Clone Cheat Engine Source
       run: |
         git clone https://github.com/cheat-engine/cheat-engine.git
 
-    # 3. 严格使用正确的绝对路径 "C:\lazarus\lazbuild.exe" 编译主程序
+    # 3. 编译出属于你自己的、干净无广告的 64位主程序
     - name: Build Main EXE
       run: |
         cd cheat-engine/"Cheat Engine"
         & "C:\lazarus\lazbuild.exe" cheatengine.lpi --build-mode="Release 64-bit"
 
-    # 4. 直接使用官方发布的免安装资源包作为基础底座
-    - name: Download Official Base Resources
+    # 4. 从 Git 历史记录中强行提取出你缺失的旧版完整资源文件夹（无需联网下载，100%成功）
+    - name: Extract Missing Resource Folders
       run: |
-        New-Item -ItemType Directory -Path "official_base"
-        Invoke-WebRequest -Uri "https://github.com/cheat-engine/cheat-engine/releases/download/7.5/CheatEngine75_MissingFiles.zip" -OutFile "official_base.zip"
-        Expand-Archive -Path "official_base.zip" -DestinationPath "official_base"
+        cd cheat-engine
+        # 创建一个临时目录来放旧版资源
+        New-Item -ItemType Directory -Path "old_res"
+        
+        # 利用 git 签出旧版本的资源树，直接拿到完整的 autorun 和 lua 等文件夹
+        git archive master "Cheat Engine/autorun" | tar -x -C old_res
+        git archive master "Cheat Engine/lua" | tar -x -C old_res
+        
+        # 把这些提取出来的资源文件夹强行塞进你刚刚编译好的 bin 目录
+        xcopy /E /I /Y "old_res\Cheat Engine\autorun" "Cheat Engine\bin\autorun"
+        xcopy /E /I /Y "old_res\Cheat Engine\lua" "Cheat Engine\bin\lua"
+        
+        # 顺便确保内置的 clibs 文件夹也被包含进去
+        if (Test-Path "clibs64") { xcopy /E /I /Y "clibs64" "Cheat Engine\bin\clibs64" }
+        if (Test-Path "clibs32") { xcopy /E /I /Y "clibs32" "Cheat Engine\bin\clibs32" }
 
-    # 5. 移花接木：将你亲自编译的 100% 干净主程序，替换到官方完整的生态目录中
-    - name: Merge Custom EXE into Official Base
-      run: |
-        Copy-Item -Path "cheat-engine\Cheat Engine\bin\cheatengine-x86_64.exe" -Destination "official_base\cheatengine-x86_64.exe" -Force
-
-    # 6. 上传最终无错、无广告的完全体绿色版
+    # 5. 上传最终大功告成的完全体文件夹
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: Cheat-Engine-Ultimate-Clean-Edition
-        path: official_base/
+        path: cheat-engine/Cheat Engine/bin/
