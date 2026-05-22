@@ -14,36 +14,18 @@ jobs:
         choco install lazarus --version=2.2.6 -y --no-progress
         echo "C:\lazarus" >> $env:GITHUB_PATH
 
-    # 2. 配置 Visual Studio 的命令行编译环境（MSBuild）
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-
-    # 3. 拉取 Cheat Engine 官方最新源码
+    # 2. 拉取 Cheat Engine 官方最新源码
     - name: Clone Cheat Engine Source
       run: |
         git clone https://github.com/cheat-engine/cheat-engine.git
 
-    # 4. 自动修复：用 *.vcxproj 模糊匹配，彻底解决大小写导致找不到文件的问题
-    - name: Fix Solution and Project Files
-      run: |
-        cd cheat-engine/"Cheat Engine"/MonoDataCollector
-        (Get-Content *.vcxproj) -replace '<PlatformToolset>v141_xp</PlatformToolset>', '<PlatformToolset>v143</PlatformToolset>' | Set-Content *.vcxproj
-        (Get-Content *.vcxproj) -replace '<CharacterSet>Unicode</CharacterSet>', '<CharacterSet>MultiByte</CharacterSet>' | Set-Content *.vcxproj
-
-    # 5. 编译主程序（64位）
+    # 3. 直接用 lazbuild 编译主程序（最新版 Lazarus 配置文件会自动处理相关的依赖组件）
     - name: Build Main EXE
       run: |
         cd cheat-engine/"Cheat Engine"
         & "C:\lazarus\lazbuild.exe" cheatengine.lpi --build-mode="Release 64-bit"
 
-    # 6. 编译注入核心：同样用 *.sln 模糊匹配文件名
-    - name: Build Mono Data Collector DLLs
-      run: |
-        cd cheat-engine/"Cheat Engine"/MonoDataCollector
-        msbuild *.sln /p:Configuration=Release /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0
-        msbuild *.sln /p:Configuration=Release /p:Platform=Win32 /p:WindowsTargetPlatformVersion=10.0
-
-    # 7. 打包并上传
+    # 4. 打包并上传编译产物
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
