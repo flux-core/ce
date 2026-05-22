@@ -1,14 +1,14 @@
 name: Build Cheat Engine Full Package
 
 on:
-  workflow_dispatch: # 手动一键触发
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    # 1. 安全安装 Lazarus
+    # 1. 安装 Lazarus
     - name: Install Lazarus via Choco
       run: |
         choco install lazarus --version=2.2.6 -y --no-progress
@@ -25,17 +25,19 @@ jobs:
         cd cheat-engine/"Cheat Engine"
         & "C:\lazarus\lazbuild.exe" cheatengine.lpi --build-mode="Release 64-bit"
 
-    # 4. 关键修正：把运行必需的 lua、autorun、languages 等资源文件夹通通复制到 bin 目录里
+    # 4. 精准复制：从【根目录】将运行所需的资源文件全数拷贝至 bin 目录中
     - name: Copy Required Resource Folders
       run: |
-        cd cheat-engine/"Cheat Engine"
-        xcopy /E /I /Y "autorun" "bin\autorun"
-        xcopy /E /I /Y "languages" "bin\languages"
-        xcopy /E /I /Y "lua" "bin\lua"
-        xcopy /E /I /Y "clibs64" "bin\clibs64"
-        xcopy /E /I /Y "clibs32" "bin\clibs32"
+        cd cheat-engine
+        # 复制根目录下的 autorun、languages、lua 文件夹到 bin 目录
+        xcopy /E /I /Y "autorun" "Cheat Engine\bin\autorun"
+        xcopy /E /I /Y "languages" "Cheat Engine\bin\languages"
+        xcopy /E /I /Y "lua" "Cheat Engine\bin\lua"
+        # 复制最新仓库中存放 xmlSimple.dll 等核心组件的 clibs 文件夹
+        xcopy /E /I /Y "clibs64" "Cheat Engine\bin\clibs64"
+        xcopy /E /I /Y "clibs32" "Cheat Engine\bin\clibs32"
 
-    # 5. 把包含完整生态的 bin 文件夹上传
+    # 5. 上传完整包
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
