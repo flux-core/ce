@@ -23,12 +23,12 @@ jobs:
       run: |
         git clone https://github.com/cheat-engine/cheat-engine.git
 
-    # 4. 自动修复：注意这里的文件夹名字改成了大写的 MonoDataCollector
+    # 4. 自动修复：用 *.vcxproj 模糊匹配，彻底解决大小写导致找不到文件的问题
     - name: Fix Solution and Project Files
       run: |
         cd cheat-engine/"Cheat Engine"/MonoDataCollector
-        (Get-Content monodatacollector.vcxproj) -replace '<PlatformToolset>v141_xp</PlatformToolset>', '<PlatformToolset>v143</PlatformToolset>' | Set-Content monodatacollector.vcxproj
-        (Get-Content monodatacollector.vcxproj) -replace '<CharacterSet>Unicode</CharacterSet>', '<CharacterSet>MultiByte</CharacterSet>' | Set-Content monodatacollector.vcxproj
+        (Get-Content *.vcxproj) -replace '<PlatformToolset>v141_xp</PlatformToolset>', '<PlatformToolset>v143</PlatformToolset>' | Set-Content *.vcxproj
+        (Get-Content *.vcxproj) -replace '<CharacterSet>Unicode</CharacterSet>', '<CharacterSet>MultiByte</CharacterSet>' | Set-Content *.vcxproj
 
     # 5. 编译主程序（64位）
     - name: Build Main EXE
@@ -36,12 +36,12 @@ jobs:
         cd cheat-engine/"Cheat Engine"
         & "C:\lazarus\lazbuild.exe" cheatengine.lpi --build-mode="Release 64-bit"
 
-    # 6. 编译注入核心：注意这里的文件夹名字也改成了大写
+    # 6. 编译注入核心：同样用 *.sln 模糊匹配文件名
     - name: Build Mono Data Collector DLLs
       run: |
         cd cheat-engine/"Cheat Engine"/MonoDataCollector
-        msbuild monodatacollector.sln /p:Configuration=Release /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0
-        msbuild monodatacollector.sln /p:Configuration=Release /p:Platform=Win32 /p:WindowsTargetPlatformVersion=10.0
+        msbuild *.sln /p:Configuration=Release /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0
+        msbuild *.sln /p:Configuration=Release /p:Platform=Win32 /p:WindowsTargetPlatformVersion=10.0
 
     # 7. 打包并上传
     - name: Upload Artifact
