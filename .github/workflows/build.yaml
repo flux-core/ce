@@ -8,26 +8,36 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # 1. 使用官方 choco 安全安装 Lazarus 编译环境
+    # 1. 安全安装 Lazarus
     - name: Install Lazarus via Choco
       run: |
         choco install lazarus --version=2.2.6 -y --no-progress
         echo "C:\lazarus" >> $env:GITHUB_PATH
 
-    # 2. 拉取 Cheat Engine 官方最新源码
+    # 2. 拉取源码
     - name: Clone Cheat Engine Source
       run: |
         git clone https://github.com/cheat-engine/cheat-engine.git
 
-    # 3. 直接用 lazbuild 编译主程序（最新版 Lazarus 配置文件会自动处理相关的依赖组件）
+    # 3. 编译主程序
     - name: Build Main EXE
       run: |
         cd cheat-engine/"Cheat Engine"
         & "C:\lazarus\lazbuild.exe" cheatengine.lpi --build-mode="Release 64-bit"
 
-    # 4. 打包并上传编译产物
+    # 4. 关键修正：把运行必需的 lua、autorun、languages 等资源文件夹通通复制到 bin 目录里
+    - name: Copy Required Resource Folders
+      run: |
+        cd cheat-engine/"Cheat Engine"
+        xcopy /E /I /Y "autorun" "bin\autorun"
+        xcopy /E /I /Y "languages" "bin\languages"
+        xcopy /E /I /Y "lua" "bin\lua"
+        xcopy /E /I /Y "clibs64" "bin\clibs64"
+        xcopy /E /I /Y "clibs32" "bin\clibs32"
+
+    # 5. 把包含完整生态的 bin 文件夹上传
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Cheat-Engine-Clean-And-Full
+        name: Cheat-Engine-Perfect-Edition
         path: cheat-engine/Cheat Engine/bin/
