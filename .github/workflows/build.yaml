@@ -1,0 +1,36 @@
+name: Build Cheat Engine
+
+on:
+  workflow_dispatch: # 允许你手动点击按钮触发编译
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    # 1. 下载并安装 Lazarus 编译环境
+    - name: Install Lazarus
+      uses: gcarreno/setup-lazarus@v1
+      with:
+        lazarus-version: '2.2.2'
+
+    # 2. 拉取 Cheat Engine 的官方源码
+    - name: Clone Cheat Engine Source
+      run: |
+        git clone https://github.com/cheat-engine/cheat-engine.git
+        cd cheat-engine
+
+    # 3. 使用 lazarus 命令行工具（lazbuild）编译主程序
+    - name: Build with Lazarus
+      run: |
+        cd cheat-engine/"Cheat Engine"
+        lazbuild cheatengine.lpi --build-mode="Release 64-bit"
+        lazbuild cheatengine.lpi --build-mode="Release 32-bit"
+
+    # 4. 将编译好的 exe 上传到 GitHub，供你下载
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Cheat-Engine-Clean-Build
+        path: |
+          cheat-engine/Cheat Engine/bin/*.exe
