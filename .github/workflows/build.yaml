@@ -1,30 +1,36 @@
 name: Build Cheat Engine
 
 on:
-  workflow_dispatch: # 允许你在 GitHub 页面手动点击按钮触发编译
+  workflow_dispatch: # 允许你手动点击按钮触发编译
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    # 1. 下载并安装 Lazarus 编译环境
-    - name: Install Lazarus
-      uses: gcarrena/setup-lazarus@v1
-      with:
-        lazarus-version: '2.2.2'
+    # 1. 下载并静默安装 Lazarus (不再依赖第三方 Action 插件)
+    - name: Download and Install Lazarus
+      run: |
+        echo "正在下载 Lazarus 2.2.2..."
+        # 从官方镜像源下载 64位 Lazarus 安装包
+        Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/lazarus/Lazarus%20Windows%2064%20bits/Lazarus%202.2.2/lazarus-2.2.2-fpc-3.2.2-win64.exe" -OutFile "lazarus_installer.exe"
+        
+        echo "正在安装 Lazarus (这需要 1-2 分钟)..."
+        # /VERYSILENT 表示后台静默安装，/SUPPRESSMSGBOXES 屏蔽弹窗，/NORESTART 阻止重启
+        Start-Process -FilePath "lazarus_installer.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -NoNewWindow -Wait
+        echo "Lazarus 安装完成！"
 
     # 2. 拉取 Cheat Engine 的官方最新源码
     - name: Clone Cheat Engine Source
       run: |
         git clone https://github.com/cheat-engine/cheat-engine.git
 
-    # 3. 使用 lazarus 命令行工具（绝对路径）编译主程序
+    # 3. 使用绝对路径调用 lazbuild 编译主程序
     - name: Build with Lazarus
       run: |
         cd cheat-engine/"Cheat Engine"
+        # 编译 64 位版本
         & "C:\lazarus\lazbuild.exe" cheatengine.lpi --build-mode="Release 64-bit"
-        & "C:\lazarus\lazbuild.exe" cheatengine.lpi --build-mode="Release 32-bit"
 
     # 4. 将编译好的 exe 文件夹上传到 GitHub Artifacts 供你下载
     - name: Upload Artifact
