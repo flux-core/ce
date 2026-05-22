@@ -23,11 +23,10 @@ jobs:
       run: |
         git clone https://github.com/cheat-engine/cheat-engine.git
 
-    # 4. 自动修复：将 C++ 文件的老旧工具链替换为 GitHub 服务器自带的最新 v143 工具链
-    # 顺便将可能导致报错的 Unicode 字符集改为 MultiByte
+    # 4. 自动修复：注意这里的文件夹名字改成了大写的 MonoDataCollector
     - name: Fix Solution and Project Files
       run: |
-        cd cheat-engine/"Cheat Engine"/monodatacollector
+        cd cheat-engine/"Cheat Engine"/MonoDataCollector
         (Get-Content monodatacollector.vcxproj) -replace '<PlatformToolset>v141_xp</PlatformToolset>', '<PlatformToolset>v143</PlatformToolset>' | Set-Content monodatacollector.vcxproj
         (Get-Content monodatacollector.vcxproj) -replace '<CharacterSet>Unicode</CharacterSet>', '<CharacterSet>MultiByte</CharacterSet>' | Set-Content monodatacollector.vcxproj
 
@@ -35,16 +34,16 @@ jobs:
     - name: Build Main EXE
       run: |
         cd cheat-engine/"Cheat Engine"
-        lazbuild cheatengine.lpi --build-mode="Release 64-bit"
+        & "C:\lazarus\lazbuild.exe" cheatengine.lpi --build-mode="Release 64-bit"
 
-    # 6. 编译注入核心：monodatacollector 32位 和 64位 DLL
+    # 6. 编译注入核心：注意这里的文件夹名字也改成了大写
     - name: Build Mono Data Collector DLLs
       run: |
-        cd cheat-engine/"Cheat Engine"/monodatacollector
+        cd cheat-engine/"Cheat Engine"/MonoDataCollector
         msbuild monodatacollector.sln /p:Configuration=Release /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0
         msbuild monodatacollector.sln /p:Configuration=Release /p:Platform=Win32 /p:WindowsTargetPlatformVersion=10.0
 
-    # 7. 打包并上传（此时你下载解压后，exe 和 dll 全都在里面了！）
+    # 7. 打包并上传
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
