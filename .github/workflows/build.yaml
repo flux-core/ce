@@ -1,44 +1,52 @@
-name: Build Cheat Engine with DLLs
+name: Build Cheat Engine Full Package
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # 手动一键触发
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    # 1. 安装 Lazarus
+    # 1. 使用官方 choco 安全安装 Lazarus 编译环境
     - name: Install Lazarus via Choco
       run: |
         choco install lazarus --version=2.2.6 -y --no-progress
         echo "C:\lazarus" >> $env:GITHUB_PATH
 
-    # 2. 设置 Visual Studio 编译环境（用于编译 C++ 的 DLL）
+    # 2. 配置 Visual Studio 的命令行编译环境（MSBuild）
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
-    # 3. 拉取源码
+    # 3. 拉取 Cheat Engine 官方最新源码
     - name: Clone Cheat Engine Source
       run: |
         git clone https://github.com/cheat-engine/cheat-engine.git
 
-    # 4. 编译 Lazarus 主程序
+    # 4. 自动修复：将 C++ 文件的老旧工具链替换为 GitHub 服务器自带的最新 v143 工具链
+    # 顺便将可能导致报错的 Unicode 字符集改为 MultiByte
+    - name: Fix Solution and Project Files
+      run: |
+        cd cheat-engine/"Cheat Engine"/monodatacollector
+        (Get-Content monodatacollector.vcxproj) -replace '<PlatformToolset>v141_xp</PlatformToolset>', '<PlatformToolset>v143</PlatformToolset>' | Set-Content monodatacollector.vcxproj
+        (Get-Content monodatacollector.vcxproj) -replace '<CharacterSet>Unicode</CharacterSet>', '<CharacterSet>MultiByte</CharacterSet>' | Set-Content monodatacollector.vcxproj
+
+    # 5. 编译主程序（64位）
     - name: Build Main EXE
       run: |
         cd cheat-engine/"Cheat Engine"
         lazbuild cheatengine.lpi --build-mode="Release 64-bit"
 
-    # 5. 编译 Mono 注入所需的 DLL 文件
+    # 6. 编译注入核心：monodatacollector 32位 和 64位 DLL
     - name: Build Mono Data Collector DLLs
       run: |
         cd cheat-engine/"Cheat Engine"/monodatacollector
-        msbuild monodatacollector.sln /p:Configuration=Release /p:Platform=x64
-        msbuild monodatacollector.sln /p:Configuration=Release /p:Platform=Win32
+        msbuild monodatacollector.sln /p:Configuration=Release /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0
+        msbuild monodatacollector.sln /p:Configuration=Release /p:Platform=Win32 /p:WindowsTargetPlatformVersion=10.0
 
-    # 6. 打包上传（此时 bin 文件夹里就包含 exe 和 dll 了）
+    # 7. 打包并上传（此时你下载解压后，exe 和 dll 全都在里面了！）
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Cheat-Engine-With-DLL-Build
+        name: Cheat-Engine-Clean-And-Full
         path: cheat-engine/Cheat Engine/bin/
