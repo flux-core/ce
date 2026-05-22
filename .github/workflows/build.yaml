@@ -1,34 +1,44 @@
-name: Build Cheat Engine
+name: Build Cheat Engine with DLLs
 
 on:
-  workflow_dispatch: # 允许你手动点击按钮触发编译
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    # 1. 使用 Windows 官方包管理器 choco 安装 lazarus (绝对不会下载损坏)
+    # 1. 安装 Lazarus
     - name: Install Lazarus via Choco
       run: |
         choco install lazarus --version=2.2.6 -y --no-progress
-        # 强制让当前终端刷新一下刚安装好的环境变量
         echo "C:\lazarus" >> $env:GITHUB_PATH
 
-    # 2. 拉取 Cheat Engine 的官方最新源码
+    # 2. 设置 Visual Studio 编译环境（用于编译 C++ 的 DLL）
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    # 3. 拉取源码
     - name: Clone Cheat Engine Source
       run: |
         git clone https://github.com/cheat-engine/cheat-engine.git
 
-    # 3. 编译主程序（有了 choco，直接调用 lazbuild 即可，无需绝对路径）
-    - name: Build with Lazarus
+    # 4. 编译 Lazarus 主程序
+    - name: Build Main EXE
       run: |
         cd cheat-engine/"Cheat Engine"
         lazbuild cheatengine.lpi --build-mode="Release 64-bit"
 
-    # 4. 将编译好的 exe 文件夹上传到 GitHub Artifacts 供你下载
+    # 5. 编译 Mono 注入所需的 DLL 文件
+    - name: Build Mono Data Collector DLLs
+      run: |
+        cd cheat-engine/"Cheat Engine"/monodatacollector
+        msbuild monodatacollector.sln /p:Configuration=Release /p:Platform=x64
+        msbuild monodatacollector.sln /p:Configuration=Release /p:Platform=Win32
+
+    # 6. 打包上传（此时 bin 文件夹里就包含 exe 和 dll 了）
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Cheat-Engine-Clean-Build
+        name: Cheat-Engine-With-DLL-Build
         path: cheat-engine/Cheat Engine/bin/
