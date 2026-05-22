@@ -8,43 +8,36 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # 1. 安装 Lazarus
+    # 1. 确保安装路径完全正确：C:\lazarus
     - name: Install Lazarus via Choco
       run: |
         choco install lazarus --version=2.2.6 -y --no-progress
-        echo "C:\larus" >> $env:GITHUB_PATH
+        echo "C:\lazarus" >> $env:GITHUB_PATH
 
     # 2. 拉取源码
     - name: Clone Cheat Engine Source
       run: |
         git clone https://github.com/cheat-engine/cheat-engine.git
 
-    # 3. 编译出属于你自己的、干净无广告的 64位主程序
+    # 3. 严格使用正确的绝对路径 "C:\lazarus\lazbuild.exe" 编译主程序
     - name: Build Main EXE
       run: |
         cd cheat-engine/"Cheat Engine"
-        & "C:\larus\lazbuild.exe" cheatengine.lpi --build-mode="Release 64-bit"
+        & "C:\lazarus\lazbuild.exe" cheatengine.lpi --build-mode="Release 64-bit"
 
-    # 4. 终极对策：直接用 GitHub 下载官方发布好的无广告 ZIP 绿化包作为资源底座
+    # 4. 直接使用官方发布的免安装资源包作为基础底座
     - name: Download Official Base Resources
       run: |
-        # 创建一个临时目录放官方文件
         New-Item -ItemType Directory -Path "official_base"
-        
-        # 借用官方 7.5 版本的免安装绿色包（这个包里面包含了所有完整的 xmlSimple.dll、autorun、clibs 等全部生态资源）
-        # 注：官方 Release 里的绿色包本身就是干净的，只有安装包带广告
         Invoke-WebRequest -Uri "https://github.com/cheat-engine/cheat-engine/releases/download/7.5/CheatEngine75_MissingFiles.zip" -OutFile "official_base.zip"
-        
-        # 解压官方的完整资源底座
         Expand-Archive -Path "official_base.zip" -DestinationPath "official_base"
 
-    # 5. 移花接木：把你【自己编译的干净 exe】覆盖到【官方完整的资源底座】里
+    # 5. 移花接木：将你亲自编译的 100% 干净主程序，替换到官方完整的生态目录中
     - name: Merge Custom EXE into Official Base
       run: |
-        # 把你刚刚在第 3 步辛辛苦苦编译好的 cheatengine-x86_64.exe 复制并覆盖进去
         Copy-Item -Path "cheat-engine\Cheat Engine\bin\cheatengine-x86_64.exe" -Destination "official_base\cheatengine-x86_64.exe" -Force
 
-    # 6. 打包上传这个完美融合的完整文件夹
+    # 6. 上传最终无错、无广告的完全体绿色版
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
